@@ -6,9 +6,10 @@ with open(prog_file, 'rb') as f:
   code = f.read()
 
 pointer = 0
-count_vars = struct.unpack('<I', code[-4:])[0] + 1
+count_vars = struct.unpack('<I', code[-size_arg:])[0] + 1
 DATA = [None] * count_vars
 stack_tmp = {}
+size_arg = 4
 
 
 def get_opcode():
@@ -19,8 +20,8 @@ def get_opcode():
 
 def get_arg():
   global pointer
-  arg = struct.unpack('<I', code[pointer:pointer+4])[0]
-  pointer += 4
+  arg = struct.unpack('<I', code[pointer:pointer+size_arg])[0]
+  pointer += size_arg
   return arg
 
 
@@ -76,42 +77,42 @@ def eq():
   if stack_tmp['num1'] == stack_tmp['num2']:
     pointer = get_arg()
   else:
-    pointer += 4
+    pointer += size_arg
 
 def ne():
   global pointer
   if stack_tmp['num1'] != stack_tmp['num2']:
     pointer = get_arg()
   else:
-    pointer += 4
+    pointer += size_arg
 
 def lt():
   global pointer
   if stack_tmp['num1'] < stack_tmp['num2']:
     pointer = get_arg()
   else:
-    pointer += 4
+    pointer += size_arg
 
 def gt():
   global pointer
   if stack_tmp['num1'] > stack_tmp['num2']:
     pointer = get_arg()
   else:
-    pointer += 4
+    pointer += size_arg
 
 def le():
   global pointer
   if stack_tmp['num1'] <= stack_tmp['num2']:
     pointer = get_arg()
   else:
-    pointer += 4
+    pointer += size_arg
 
 def ge():
   global pointer
   if stack_tmp['num1'] >= stack_tmp['num2']:
     pointer = get_arg()
   else:
-    pointer += 4
+    pointer += size_arg
 
 def vm_print():
   print(DATA[get_arg()])
@@ -124,7 +125,7 @@ def jmp():
   pointer = get_arg()
 
 def halt():
-  exit()
+  raise StopIteration
 
 OPCODES = {
   0: halt, # завершение программы. ВЫХОД!
@@ -148,8 +149,10 @@ OPCODES = {
   18: read, # читать данные из консоли
 }
 
+try:
+  while pointer < len(code):
+    opcode = get_opcode()
 
-while pointer < len(code):
-  opcode = get_opcode()
-
-  OPCODES[opcode]()
+    OPCODES[opcode]()
+except StopIteration:
+  pass
