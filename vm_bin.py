@@ -1,114 +1,155 @@
+import struct
+
+prog_file = 'calc_io.vmbin'
+
+with open(prog_file, 'rb') as f:
+  code = f.read()
+
 pointer = 0
-VARS = [None]
-DATA = [None] * len(VARS)
+count_vars = struct.unpack('<I', code[-4:])[0] + 1
+DATA = [None] * count_vars
+stack_tmp = {}
 
 
-def get_two_params():
+def get_opcode():
+  global pointer
+  opcode = code[pointer]
   pointer += 1
-  val1 = COMMANDS[pointer]
-  pointer += 1
-  val2 = COMMANDS[pointer]
-  pointer += 1
-  return val1, val2
+  return opcode
+
+def get_arg():
+  global pointer
+  arg = struct.unpack('<I', code[pointer:pointer+4])[0]
+  pointer += 4
+  return arg
 
 
 def add():
-  num1, num2 = get_two_params()
+  num1 = get_arg()
+  num2 = get_arg()
   DATA[num1] += DATA[num2]
 
 def sub():
-  num1, num2 = get_two_params()
+  num1 = get_arg()
+  num2 = get_arg()
   DATA[num1] -= DATA[num2]
 
 def mul():
-  num1, num2 = get_two_params()
+  num1 = get_arg()
+  num2 = get_arg()
   DATA[num1] *= DATA[num2]
 
 def div():
-  num1, num2 = get_two_params()
+  num1 = get_arg()
+  num2 = get_arg()
   DATA[num1] /= DATA[num2]
 
 def idiv():
-  num1, num2 = get_two_params()
+  num1 = get_arg()
+  num2 = get_arg()
   DATA[num1] //= DATA[num2]
 
 def mod():
-  num1, num2 = get_two_params()
+  num1 = get_arg()
+  num2 = get_arg()
   DATA[num1] %= DATA[num2]
 
 def mov():
-  name, val = get_two_params()
+  name = get_arg()
+  val = get_arg()
   DATA[name] = val
 
 def movm():
-  name, val = get_two_params()
+  name = get_arg()
+  val = get_arg()
   DATA[name] = DATA[val]
 
 def cmp():
-  num1, num2 = get_two_params()
-  DATA[VARS['num1']] = DATA[num1]
-  DATA[VARS['num2']] = DATA[num2]
+  num1 = get_arg()
+  num2 = get_arg()
+  stack_tmp['num1'] = num1
+  stack_tmp['num2'] = num2
 
 # условия:
 def eq():
-  if DATA[VARS['num1']] == DATA[VARS['num2']]:
-    pointer = COMMANDS[pointer + 1]
+  global pointer
+  if stack_tmp['num1'] == stack_tmp['num2']:
+    pointer = get_arg()
   else:
-    pointer += 2
+    pointer += 4
 
 def ne():
-  if DATA[VARS['num1']] != DATA[VARS['num2']]:
-    pointer = COMMANDS[pointer + 1]
+  global pointer
+  if stack_tmp['num1'] != stack_tmp['num2']:
+    pointer = get_arg()
   else:
-    pointer += 2
+    pointer += 4
 
 def lt():
-  if DATA[VARS['num1']] < DATA[VARS['num2']]:
-    pointer = COMMANDS[pointer + 1]
+  global pointer
+  if stack_tmp['num1'] < stack_tmp['num2']:
+    pointer = get_arg()
   else:
-    pointer += 2
+    pointer += 4
 
 def gt():
-  if DATA[VARS['num1']] > DATA[VARS['num2']]:
-    pointer = COMMANDS[pointer + 1]
+  global pointer
+  if stack_tmp['num1'] > stack_tmp['num2']:
+    pointer = get_arg()
   else:
-    pointer += 2
+    pointer += 4
 
 def le():
-  if DATA[VARS['num1']] <= DATA[VARS['num2']]:
-    pointer = COMMANDS[pointer + 1]
+  global pointer
+  if stack_tmp['num1'] <= stack_tmp['num2']:
+    pointer = get_arg()
   else:
-    pointer += 2
+    pointer += 4
 
 def ge():
-  if DATA[VARS['num1']] >= DATA[VARS['num2']]:
-    pointer = COMMANDS[pointer + 1]
+  global pointer
+  if stack_tmp['num1'] >= stack_tmp['num2']:
+    pointer = get_arg()
   else:
-    pointer += 2
+    pointer += 4
 
 def vm_print():
-  pointer += 1
-  print(DATA[COMMANDS[pointer]])
-  pointer += 1
+  print(DATA[get_arg()])
 
-def read(var):
-  pointer += 1
-  DATA[COMMANDS[pointer]] = int(input())
-  pointer += 1
+def read():
+  DATA[get_arg()] = int(input())
 
 def jmp():
-  pointer = COMMANDS[pointer + 1]
+  global pointer
+  pointer = get_arg()
 
-COMMANDS = [
-  add, sub, mul, div, idiv, mod, mov, movm, cmp, eq, ne, lt, gt,
-  le, ge, vm_print, read, jmp
-]
+def halt():
+  exit()
 
-is_running = True
-while is_running:
-  #print(pointer, COMMANDS[pointer])
-  if pointer == len(COMMANDS) - 1:
-    is_running = False
-    break
+OPCODES = {
+  0: halt, # завершение программы. ВЫХОД!
+  1: add, # +
+  2: sub, # -
+  3: mul, # *
+  4: div, # /
+  5: idiv, # //
+  6: mod, # %
+  7: mov, # = присвоение конкретного значения
+  8: movm, # = присваивает одной переменной значение другой переменной
+  9: cmp, # сравнение двух операндов
+  10: eq, # перейти на метку, если ==
+  11: ne, # перейти на метку, если !=
+  12: lt, # перейти на метку, если <
+  13: gt, # перейти на метку, если >
+  14: le, # перейти на метку, если <=
+  15: ge, # перейти на метку, если >=
+  16: jmp, # безусловный переход на метку
+  17: vm_print, # печать в консоль строки
+  18: read, # читать данные из консоли
+}
 
-  COMMANDS[pointer]()
+
+while pointer < len(code):
+  opcode = get_opcode()
+
+  OPCODES[opcode]()
