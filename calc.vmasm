@@ -1,0 +1,25 @@
+read 0
+read 1
+movm 2 0
+add 2 1
+print 2
+
+movm 2 0
+sub 2 1
+print 2
+
+movm 2 0
+mul 2 1
+print 2
+
+movm 2 0
+div 2 1
+print 2
+
+movm 2 0
+idiv 2 1
+print 2
+
+movm 2 0
+mod 2 1
+print 2
